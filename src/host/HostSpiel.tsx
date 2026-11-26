@@ -66,7 +66,7 @@ function Kopfzeile({ h }: { h: HostSteuerung }) {
           <span className="rounded-lg bg-falsch/20 px-4 py-2 font-semibold text-falsch">Verbindung unterbrochen – verbinde neu …</span>
         )}
         {h.modus === 'lokal' && <span className="rounded-lg bg-white/10 px-4 py-2 text-gold-200">Lokaler Testmodus</span>}
-        {s.klasse && <span className="text-gold-200">Klasse {s.klasse}</span>}
+        <span className="text-gold-200">{s.klasse ? `Klasse ${s.klasse}` : 'Freies Spiel'}</span>
         {s.phase !== 'lobby' && (
           <span>
             Mitmachen: <span className="font-semibold">{joinBasis()}/</span>

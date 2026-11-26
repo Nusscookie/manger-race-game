@@ -1,5 +1,5 @@
 /**
- * Fragen für „Der Weg zur Krippe“.
+ * Bibelfragen für „Der Weg zur Krippe“ (die weltlichen Fragen stehen in fragenWelt.ts).
  *
  * - Stellenangaben nach Lutherbibel 2017.
  * - Die richtige Antwort steht hier zur leichteren Kontrolle immer an erster Stelle
@@ -8,7 +8,19 @@
  * - Die ersten 16 Fragen sind von der SMV bereits geprüft.
  */
 
-export type Kategorie = 'Lukas' | 'Matthäus' | 'Mythos' | 'Hintergrund';
+import { WELT_FRAGEN } from './fragenWelt';
+
+/** Bibel-Kategorien: Lukas, Matthäus, Mythos, Hintergrund – alle anderen sind weltlich. */
+export type Kategorie =
+  | 'Lukas'
+  | 'Matthäus'
+  | 'Mythos'
+  | 'Hintergrund'
+  | 'Weihnachtsmann'
+  | 'Brauchtum'
+  | 'Welt'
+  | 'Musik & Film'
+  | 'Geschichte';
 
 export interface Frage {
   frage: string;
@@ -20,7 +32,7 @@ export interface Frage {
   kategorie: Kategorie;
 }
 
-export const FRAGEN: Frage[] = [
+export const BIBEL_FRAGEN: Frage[] = [
   // ───────────── Bereits geprüft (SMV) ─────────────
   {
     frage: 'Welcher Kaiser ordnete die Volkszählung an?',
@@ -428,3 +440,20 @@ export const FRAGEN: Frage[] = [
     kategorie: 'Hintergrund',
   },
 ];
+
+/** Welche Fragen ein Spiel verwendet (wählbar beim Erstellen des Raums). */
+export type FragenMix = 'gemischt' | 'bibel' | 'welt';
+
+export const FRAGENMIX_INFO: Record<FragenMix, { titel: string; text: string }> = {
+  gemischt: { titel: 'Gemischt', text: 'Abwechselnd Weihnachtsgeschichte und Weihnachten in aller Welt' },
+  bibel: { titel: 'Weihnachts\u00ADgeschichte', text: 'Nur Fragen zur biblischen Weihnachtsgeschichte' },
+  welt: { titel: 'Weihnachten weltweit', text: 'Weihnachtsmann, Bräuche, Lieder, Filme und Geschichte' },
+};
+
+/** Alle Fragen (erst Bibel, dann weltlich). */
+export const FRAGEN: Frage[] = [...BIBEL_FRAGEN, ...WELT_FRAGEN];
+
+const BIBEL_ANZAHL = BIBEL_FRAGEN.length;
+export function istBibelFrage(index: number): boolean {
+  return index < BIBEL_ANZAHL;
+}

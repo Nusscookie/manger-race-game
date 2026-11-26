@@ -4,7 +4,8 @@ Ein kurzes Multiplayer-Weihnachtsquiz für die Morgenbesinnung am Peter-Breuer-G
 (Adventskalender der SMV, Türchen 16 · 16. Dezember 2026).
 
 Die Lehrkraft öffnet am Smartboard einen Spielraum. Die Schülerinnen und Schüler treten per QR-Code
-mit dem Handy bei, beantworten Fragen zur biblischen Weihnachtsgeschichte und ziehen mit jeder
+mit dem Handy bei, beantworten Fragen zur biblischen Weihnachtsgeschichte und zu Weihnachten in
+aller Welt und ziehen mit jeder
 richtigen Antwort auf einem Spielbrett von Nazareth Richtung Krippe in Bethlehem.
 
 - **Kein Login, keine Namen, keine personenbezogenen Daten.** Jede Figur bekommt automatisch einen
@@ -105,10 +106,17 @@ Steht dort nichts dergleichen, ist nichts zu tun.
    hineinkopieren.
 3. **Run** klicken. Es sollte „Success. No rows returned“ erscheinen.
 
-Damit gibt es eine Tabelle `klassenwertung`, in die das Spiel nach jeder Runde Klasse + Anteil
-richtiger Antworten einträgt. Dank *Row Level Security* darf jeder nur **lesen und eintragen**,
-aber nichts ändern oder löschen. Einträge löschen kannst nur du im Supabase-Dashboard
-(**Table Editor → klassenwertung**), z. B. wenn jemand Unsinn eingetragen hat.
+Damit gibt es eine Tabelle `klassenwertung`, in die das Spiel nach jedem **Klassenspiel** Klasse +
+Anteil richtiger Antworten einträgt (ein **Freies Spiel** wird nie eingetragen). Dank *Row Level
+Security* darf jeder nur **lesen und eintragen**, aber nichts ändern oder löschen.
+
+**Rangliste zurücksetzen** (z. B. nach euren Tests) geht deshalb nur im Supabase-Dashboard:
+
+- Alles löschen: **SQL Editor → New query**, die Datei
+  [`supabase/rangliste-zuruecksetzen.sql`](supabase/rangliste-zuruecksetzen.sql) einfügen, **Run**.
+- Einzelne Einträge: **Table Editor → klassenwertung**, Zeilen anhaken → **Delete**.
+
+Tipp: Zum Testen am besten „Freies Spiel“ wählen – dann landet gar nichts in der Rangliste.
 
 ### 2.5 Lokal mit Supabase testen (optional)
 
@@ -165,7 +173,9 @@ Jeder neue `git push` auf `main` veröffentlicht automatisch eine neue Version.
 - [ ] **Generalprobe am 15.12.:** Auf der echten Seite `…/host?bots=30` einen Raum erstellen und mit
       zwei, drei echten Handys (eins im WLAN, eins mit mobilen Daten) beitreten und eine Runde spielen.
 - [ ] Zwei Räume gleichzeitig ausprobieren (zwei Rechner/Browser), um zu sehen, dass sie sich nicht stören.
-- [ ] Die Fragen mit `// PRÜFEN` in `src/data/fragen.ts` kontrollieren.
+- [ ] Die Fragen mit `// PRÜFEN` in `src/data/fragen.ts` kontrollieren und die weltlichen Fragen in
+      `src/data/fragenWelt.ts` einmal durchlesen.
+- [ ] Testeinträge aus der Rangliste löschen (siehe 2.4).
 - [ ] Link und Anleitung für die Lehrkräfte verschicken (siehe [`LEHRKRAEFTE.md`](LEHRKRAEFTE.md)).
 
 ---
@@ -199,7 +209,14 @@ am Handy steht dann „Verbindung weg – verbinde neu …“.
 
 ## 7. Fragen bearbeiten
 
-Alle Fragen stehen in [`src/data/fragen.ts`](src/data/fragen.ts). Jede Frage hat:
+Es gibt zwei Fragendateien:
+
+- [`src/data/fragen.ts`](src/data/fragen.ts): 40 Fragen zur biblischen Weihnachtsgeschichte
+- [`src/data/fragenWelt.ts`](src/data/fragenWelt.ts): über 80 weltliche Fragen (Weihnachtsmann & Co.,
+  Bräuche und Weihnachtsmärkte, Weihnachten weltweit, Lieder, Filme, Bücher, Geschichte). Bei diesen
+  Fragen steht in `stelle` statt einer Bibelstelle das Thema, z. B. `'Weihnachten weltweit · Japan'`.
+
+Jede Frage hat:
 
 ```ts
 {
@@ -214,10 +231,14 @@ Alle Fragen stehen in [`src/data/fragen.ts`](src/data/fragen.ts). Jede Frage hat
 
 - Die richtige Antwort steht in der Datei zur leichteren Kontrolle immer vorne – im Spiel werden
   Fragen **und** Antworten jedes Mal zufällig gemischt.
-- Pro Spiel werden 12 der 40 Fragen gezogen.
+- Beim Erstellen des Raums wählt man **Gemischt** (Standard: Bibel- und Weltfragen immer
+  abwechselnd, also 50:50), **Weihnachtsgeschichte** oder **Weihnachten weltweit**.
+- Pro Spiel werden höchstens 12 Fragen gezogen. Das Smartboard merkt sich, welche Fragen zuletzt
+  dran waren, und nimmt beim nächsten Spiel bevorzugt andere.
+- Neue Fragen einfach in eine der beiden Dateien schreiben – mehr Fragen sind kein Problem.
 - Fragen mit dem Kommentar `// PRÜFEN` bitte vor dem Einsatz kontrollieren.
-- Nach Änderungen `npm test` ausführen – der Test prüft u. a., dass es 40 vollständige Fragen ohne
-  doppelte Antworten gibt.
+- Nach Änderungen `npm test` ausführen – der Test prüft u. a., dass alle Fragen vollständig sind und
+  keine Frage doppelt vorkommt.
 
 ---
 
@@ -270,7 +291,7 @@ Alle Fragen stehen in [`src/data/fragen.ts`](src/data/fragen.ts). Jede Frage hat
 
 | Datei/Ordner | Inhalt |
 |---|---|
-| `src/data/fragen.ts` | die 40 Fragen |
+| `src/data/fragen.ts`, `src/data/fragenWelt.ts` | Bibelfragen und weltliche Fragen |
 | `src/game/` | Spielregeln (reine Logik, mit Tests in `engine.test.ts`) |
 | `src/net/` | Echtzeit: Supabase-Broadcast und lokaler Testmodus, Nachrichtenformat |
 | `src/host/` | Spielleitung (Smartboard): Steuerung, Bots, Ansichten |
@@ -278,6 +299,7 @@ Alle Fragen stehen in [`src/data/fragen.ts`](src/data/fragen.ts). Jede Frage hat
 | `src/components/Board.tsx` | das selbst gezeichnete Spielbrett (SVG) |
 | `src/lib/klassenwertung.ts`, `src/pages/RanglistePage.tsx` | Schulrangliste |
 | `supabase/klassenwertung.sql` | Tabelle + Sicherheitsregeln für die Rangliste |
+| `supabase/rangliste-zuruecksetzen.sql` | Rangliste leeren (nur im Supabase-Dashboard) |
 
 **Kanäle pro Raum** (z. B. Raum `ABCD`):
 

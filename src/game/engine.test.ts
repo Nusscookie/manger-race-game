@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { FRAGEN } from '../data/fragen';
+import { BIBEL_FRAGEN, FRAGEN, istBibelFrage } from '../data/fragen';
+import { WELT_FRAGEN } from '../data/fragenWelt';
 import { FRAGE_MS, MAX_SPIELER, SCHNELL_MS, ZIEL_FELD } from './constants';
 import {
   antwortAnnehmen,
@@ -8,6 +9,7 @@ import {
   entfernen,
   frageAuswerten,
   gezeigteFrage,
+  mischeRunden,
   istSpielVorbei,
   neuesSpiel,
   neuWuerfeln,
@@ -34,8 +36,10 @@ function spielerMitFeld(feld: number, keinBonus = false): Spieler {
 }
 
 describe('Fragen', () => {
-  it('enthält genau 40 vollständige Fragen', () => {
-    expect(FRAGEN).toHaveLength(40);
+  it('enthält 40 Bibelfragen, mindestens so viele weltliche und alle vollständig', () => {
+    expect(BIBEL_FRAGEN).toHaveLength(40);
+    expect(WELT_FRAGEN.length).toBeGreaterThanOrEqual(40);
+    expect(FRAGEN).toHaveLength(BIBEL_FRAGEN.length + WELT_FRAGEN.length);
     for (const f of FRAGEN) {
       expect(f.antworten).toHaveLength(4);
       expect(new Set(f.antworten).size).toBe(4);
@@ -48,6 +52,31 @@ describe('Fragen', () => {
 
   it('hat keine doppelten Fragen', () => {
     expect(new Set(FRAGEN.map((f) => f.frage)).size).toBe(FRAGEN.length);
+  });
+});
+
+describe('Fragenauswahl', () => {
+  it('gemischt: Bibel und Welt wechseln sich ab', () => {
+    const runden = mischeRunden('gemischt');
+    expect(runden).toHaveLength(12);
+    const bibel = runden.map((r) => istBibelFrage(r.frageIndex));
+    for (let i = 1; i < bibel.length; i++) expect(bibel[i]).not.toBe(bibel[i - 1]);
+    expect(new Set(runden.map((r) => r.frageIndex)).size).toBe(12);
+  });
+
+  it('nur Bibel bzw. nur Welt', () => {
+    expect(mischeRunden('bibel').every((r) => istBibelFrage(r.frageIndex))).toBe(true);
+    expect(mischeRunden('welt').every((r) => !istBibelFrage(r.frageIndex))).toBe(true);
+  });
+
+  it('vermeidet zuletzt gespielte Fragen, solange genug andere da sind', () => {
+    const zuletzt = BIBEL_FRAGEN.slice(0, 28).map((f) => f.frage);
+    const runden = mischeRunden('bibel', zuletzt);
+    expect(runden.every((r) => !zuletzt.includes(FRAGEN[r.frageIndex].frage))).toBe(true);
+    // reicht der Rest nicht, kommen die am längsten zurückliegenden zuerst wieder
+    const fast = BIBEL_FRAGEN.slice(0, 35).map((f) => f.frage);
+    const r2 = mischeRunden('bibel', fast).map((r) => FRAGEN[r.frageIndex].frage);
+    expect(r2.filter((f) => fast.includes(f)).sort()).toEqual(fast.slice(0, 7).sort());
   });
 });
 

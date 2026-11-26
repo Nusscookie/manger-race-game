@@ -12,6 +12,7 @@ import {
   entfernen,
   frageAuswerten,
   gezeigteFrage,
+  mischeRunden,
   neueBotId,
   neuWuerfeln,
   restzeitMs,
@@ -50,6 +51,21 @@ export function gespeichertesSpiel(): GameState | null {
 export function gespeichertesSpielLoeschen() {
   removeKey(HOST_SPEICHER);
   removeSessionKey(HOST_SPEICHER);
+}
+
+/** Fragetexte der letzten Spiele auf diesem Gerät – damit beim nächsten Spiel andere drankommen. */
+const ZULETZT_SPEICHER = 'krippe-zuletzt-v1';
+const ZULETZT_MAX = 70;
+
+function zuletztGespielt(): string[] {
+  const l = loadJSON<string[]>(ZULETZT_SPEICHER);
+  return Array.isArray(l) ? l : [];
+}
+
+function alsGespieltMerken(frage: string) {
+  const l = zuletztGespielt().filter((f) => f !== frage);
+  l.push(frage);
+  saveJSON(ZULETZT_SPEICHER, l.slice(-ZULETZT_MAX));
 }
 
 function spielSpeichern(s: GameState) {
@@ -154,6 +170,8 @@ export function useHostSpiel(start: GameState, bots: number, onEnde?: (s: GameSt
     clear(alleDaTimer);
     const msg = frageMsg(s, Date.now());
     if (msg) linkRef.current?.anAlle(msg);
+    const gf = gezeigteFrage(s);
+    if (gf) alsGespieltMerken(gf.frage);
     frageTimer.current = window.setTimeout(() => fn.frageBeenden(), restzeitMs(s, Date.now()) + 450);
     botsAntwortenLassen();
     geaendert();
@@ -320,7 +338,7 @@ export function useHostSpiel(start: GameState, bots: number, onEnde?: (s: GameSt
     starten() {
       const s = sRef.current;
       if (s.phase !== 'lobby' || Object.keys(s.spieler).length === 0) return;
-      spielStarten(s, Date.now());
+      spielStarten(s, Date.now(), mischeRunden(s.fragenMix, zuletztGespielt()));
       fn.frageStarten();
     },
     frageJetztBeenden: () => fn.frageBeenden(),

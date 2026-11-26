@@ -3,7 +3,7 @@
  * und ruft diese Funktionen auf. Alle Funktionen verändern den übergebenen Zustand direkt
  * und sind dadurch leicht zu testen.
  */
-import { FRAGEN, type Frage } from '../data/fragen';
+import { FRAGEN, istBibelFrage, type FragenMix } from '../data/fragen';
 import { randomHex, shuffle } from '../lib/random';
 import {
   EREIGNIS_FELDER,
@@ -64,6 +64,7 @@ export interface Runde {
 export interface GameState {
   code: string;
   klasse: string;
+  fragenMix: FragenMix;
   phase: Phase;
   runden: Runde[];
   /** 0-basiert: aktuelle bzw. zuletzt gespielte Runde */
@@ -76,10 +77,11 @@ export interface GameState {
   aktualisiert: number;
 }
 
-export function neuesSpiel(code: string, klasse = ''): GameState {
+export function neuesSpiel(code: string, klasse = '', fragenMix: FragenMix = 'gemischt'): GameState {
   return {
     code,
     klasse,
+    fragenMix,
     phase: 'lobby',
     runden: [],
     rundeNr: -1,
@@ -161,8 +163,43 @@ export function neueBotId(): { id: string; token: string } {
 
 // ───────────── Fragen ─────────────
 
-export function mischeRunden(fragen: Frage[] = FRAGEN, anzahl = MAX_FRAGEN): Runde[] {
-  const indizes = shuffle(fragen.map((_, i) => i)).slice(0, Math.min(anzahl, fragen.length));
+/**
+ * Zufällige Auswahl: erst Fragen, die zuletzt nicht dran waren; reichen die nicht,
+ * dann die am längsten zurückliegenden.
+ */
+function auswaehlen(kandidaten: number[], anzahl: number, zuletzt: ReadonlyMap<string, number>): number[] {
+  const frisch = kandidaten.filter((i) => !zuletzt.has(FRAGEN[i].frage));
+  const alt = shuffle(kandidaten.filter((i) => zuletzt.has(FRAGEN[i].frage))).sort(
+    (a, b) => zuletzt.get(FRAGEN[a].frage)! - zuletzt.get(FRAGEN[b].frage)!,
+  );
+  return [...shuffle(frisch), ...alt].slice(0, anzahl);
+}
+
+/**
+ * Stellt die Fragen für ein Spiel zusammen. Beim gemischten Spiel wechseln sich Bibel- und
+ * Weltfragen ab, damit es auch bei frühem Spielende ungefähr 50:50 bleibt.
+ * `zuletzt` = Fragetexte aus den letzten Spielen auf diesem Gerät, älteste zuerst
+ * (werden möglichst vermieden).
+ */
+export function mischeRunden(mix: FragenMix = 'gemischt', zuletzt: readonly string[] = [], anzahl = MAX_FRAGEN): Runde[] {
+  const zuletztSet = new Map(zuletzt.map((f, i) => [f, i] as const));
+  const alle = FRAGEN.map((_, i) => i);
+  const bibel = alle.filter(istBibelFrage);
+  const welt = alle.filter((i) => !istBibelFrage(i));
+  let indizes: number[];
+  if (mix === 'bibel') indizes = auswaehlen(bibel, anzahl, zuletztSet);
+  else if (mix === 'welt') indizes = auswaehlen(welt, anzahl, zuletztSet);
+  else {
+    const haelfte = Math.ceil(anzahl / 2);
+    const [erste, zweite] = Math.random() < 0.5 ? [bibel, welt] : [welt, bibel];
+    const a = auswaehlen(erste, haelfte, zuletztSet);
+    const b = auswaehlen(zweite, anzahl - haelfte, zuletztSet);
+    indizes = [];
+    for (let i = 0; i < haelfte; i++) {
+      if (a[i] !== undefined) indizes.push(a[i]);
+      if (b[i] !== undefined) indizes.push(b[i]);
+    }
+  }
   return indizes.map((frageIndex) => ({ frageIndex, reihenfolge: shuffle([0, 1, 2, 3]) }));
 }
 
@@ -192,8 +229,8 @@ export function gezeigteFrage(s: GameState, rundeNr = s.rundeNr): GezeigteFrage 
   };
 }
 
-export function spielStarten(s: GameState, now: number, runden: Runde[] = mischeRunden()): void {
-  s.runden = runden;
+export function spielStarten(s: GameState, now: number, runden?: Runde[]): void {
+  s.runden = runden ?? mischeRunden(s.fragenMix);
   s.rundeNr = -1;
   for (const p of spielerListe(s)) {
     p.feld = 0;
