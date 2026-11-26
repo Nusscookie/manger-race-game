@@ -119,9 +119,14 @@ export default function HostPage() {
           Raum erstellen
         </button>
         {bots > 0 && <p className="text-xl text-gold-200">Testmodus: {bots} simulierte Spieler treten bei.</p>}
+        {getTransport().modus !== 'lokal' && (
+          <p className="text-lg text-white/50">
+            Verbindung über {getTransport().modus === 'cloudflare' ? 'Cloudflare' : 'Supabase'}
+          </p>
+        )}
         {getTransport().modus === 'lokal' && (
           <p className="text-xl text-gold-200">
-            Lokaler Testmodus (keine Supabase-Daten eingetragen): Spieler können nur in anderen Tabs dieses Browsers beitreten.
+            Lokaler Testmodus (keine Verbindungsdaten eingetragen): Spieler können nur in anderen Tabs dieses Browsers beitreten.
           </p>
         )}
       </form>

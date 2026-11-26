@@ -1,0 +1,13 @@
+// Konfiguration für den Raum-Server auf Cloudflare (kostenloser Workers-Tarif reicht).
+// Veröffentlichen: siehe README, Abschnitt „Cloudflare einrichten“.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "krippe-raum",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-10-01",
+  "durable_objects": {
+    "bindings": [{ "name": "RAUM", "class_name": "Raum" }]
+  },
+  // Im kostenlosen Tarif sind nur Durable Objects mit SQLite-Speicher erlaubt.
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Raum"] }]
+}

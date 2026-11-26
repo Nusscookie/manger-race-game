@@ -76,7 +76,7 @@ function spielSpeichern(s: GameState) {
 export interface HostSteuerung {
   s: GameState;
   status: VerbindungsStatus;
-  modus: 'supabase' | 'lokal';
+  modus: 'cloudflare' | 'supabase' | 'lokal';
   autoWeiter: boolean;
   setAutoWeiter(v: boolean): void;
   /** Zeitpunkt, zu dem es automatisch weitergeht (oder null) */

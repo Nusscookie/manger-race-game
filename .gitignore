@@ -6,3 +6,6 @@ dist
 .env.*.local
 .DS_Store
 .netlify
+
+# Cloudflare (lokaler Speicher von wrangler dev)
+.wrangler

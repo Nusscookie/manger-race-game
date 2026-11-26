@@ -4,8 +4,46 @@
     {
       "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "5174", "--strictPort"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5174",
+        "--strictPort"
+      ],
       "port": 5174
+    },
+    {
+      "name": "raum-server",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "worker",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "8787",
+        "--ip",
+        "127.0.0.1"
+      ],
+      "port": 8787
+    },
+    {
+      "name": "dev-cloudflare",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "VITE_CLOUDFLARE_URL=ws://127.0.0.1:8787",
+        "npm",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5175",
+        "--strictPort"
+      ],
+      "port": 5175
     }
   ]
 }

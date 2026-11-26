@@ -18,7 +18,8 @@ richtigen Antwort auf einem Spielbrett von Nazareth Richtung Krippe in Bethlehem
 ## Inhalt
 
 1. [Zum Ausprobieren auf dem eigenen Rechner](#1-zum-ausprobieren-auf-dem-eigenen-rechner)
-2. [Supabase einrichten (Echtzeit + Schulrangliste)](#2-supabase-einrichten)
+2. [Supabase einrichten (Schulrangliste + Echtzeit als Rückfall)](#2-supabase-einrichten)
+2b. [Cloudflare einrichten (empfohlen: keine Obergrenze an Klassen)](#2b-cloudflare-einrichten)
 3. [Code zu GitHub hochladen](#3-code-zu-github-hochladen)
 4. [Auf Netlify veröffentlichen](#4-auf-netlify-veröffentlichen)
 5. [Vor dem 16. Dezember: Checkliste](#5-vor-dem-16-dezember-checkliste)
@@ -125,6 +126,70 @@ Datei `.env.example` kopieren und in `.env.local` umbenennen, die beiden Werte e
 
 ---
 
+## 2b. Cloudflare einrichten
+
+Mit Supabase allein können nur etwa 15 Klassen **gleichzeitig** spielen (siehe Abschnitt 6). Mit dem
+eigenen kleinen Raum-Server auf **Cloudflare** gibt es diese Grenze nicht – ebenfalls kostenlos.
+Jeder Spielraum bekommt dort seinen eigenen Mini-Server („Durable Object“), die Räume nehmen sich
+gegenseitig also nichts weg. Supabase bleibt trotzdem für die **Schulrangliste** und als **Rückfall**
+im Einsatz.
+
+### 2b.1 Konto anlegen
+
+Auf [dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up) kostenlos registrieren und die
+E-Mail bestätigen. Der kostenlose Tarif („Free“) reicht.
+
+### 2b.2 Raum-Server hochladen (einmalig, im Terminal)
+
+Im Projektordner nacheinander ausführen:
+
+```bash
+cd worker
+npm install
+npx wrangler login
+npx wrangler deploy
+```
+
+- `wrangler login` öffnet den Browser: bei Cloudflare anmelden und **Allow** klicken.
+- Beim ersten `deploy` fragt Cloudflare eventuell nach einem Namen für deine
+  `workers.dev`-Subdomain (z. B. `smv-pbg`) – eintippen, Enter.
+- Am Ende steht eine Adresse wie `https://krippe-raum.smv-pbg.workers.dev`. **Die brauchst du gleich.**
+- Test: Adresse im Browser öffnen → dort steht „Der Weg zur Krippe – Raum-Server läuft.“
+
+Der Raum-Server ändert sich praktisch nie. Nur wenn sich etwas im Ordner `worker/` ändert, muss
+`npx wrangler deploy` noch einmal ausgeführt werden – ein `git push` allein reicht dafür nicht.
+
+### 2b.3 Bei Netlify eintragen
+
+Bei Netlify die Variable **`VITE_CLOUDFLARE_URL`** = die Adresse von oben anlegen und neu bauen
+lassen (siehe Abschnitt 4). Danach steht auf `…/host` unter dem Button **„Verbindung über Cloudflare“**.
+
+### 2b.4 Rückfall auf Supabase
+
+Falls Cloudflare einmal Probleme macht: bei Netlify zusätzlich die Variable **`VITE_ECHTZEIT`** =
+`supabase` anlegen und neu bauen lassen. Auf `…/host` steht dann „Verbindung über Supabase“.
+Zurück zu Cloudflare: Variable löschen und neu bauen. Räume, die beim Umschalten gerade laufen,
+müssen danach neu erstellt werden.
+
+### 2b.5 Was der kostenlose Tarif hergibt
+
+- **Keine Grenze für gleichzeitige Verbindungen** – jeder Raum hat seinen eigenen Mini-Server.
+- **100.000 Anfragen pro Tag.** Eine Verbindung öffnen zählt als 1 Anfrage, ankommende Nachrichten
+  zählen nur zu 1/20, ausgehende gar nicht.
+- **13.000 GB-s Rechenzeit pro Tag** – reicht geschätzt für 150–200 Spiele pro Tag.
+- Die Kontingente werden jede Nacht um 1 Uhr (deutsche Winterzeit) zurückgesetzt.
+
+Der Raum-Server kennt keine Spielregeln, er leitet nur Nachrichten weiter. Schutz vor Unfug:
+höchstens 80 Verbindungen pro Raum, eine Bremse gegen Nachrichten-Spam, und nur der Browser, der
+einen Raum erstellt hat, darf ihn als Spielleitung steuern.
+
+### 2b.6 Lokal mit Cloudflare testen (optional)
+
+Im Ordner `worker` `npm run dev` starten (läuft dann auf `http://127.0.0.1:8787`) und in `.env.local`
+die Zeile `VITE_CLOUDFLARE_URL=ws://127.0.0.1:8787` ergänzen, dann im Hauptordner `npm run dev`.
+
+---
+
 ## 3. Code zu GitHub hochladen
 
 1. Auf [github.com](https://github.com) ein neues, leeres Repository anlegen, z. B. `manger-race-game`
@@ -151,6 +216,7 @@ git push -u origin main
    **Site configuration → Environment variables → Add a variable** – die beiden Variablen eintragen:
    - `VITE_SUPABASE_URL` = deine Project URL
    - `VITE_SUPABASE_PUBLISHABLE_KEY` = dein publishable key (`sb_publishable_…`)
+   - `VITE_CLOUDFLARE_URL` = die Adresse deines Raum-Servers (siehe 2b, empfohlen)
 5. **Deploy** klicken. Nach ca. einer Minute ist die Seite online.
 6. Wichtig: Wenn du die Variablen **nach** dem ersten Deploy einträgst oder änderst, musst du neu
    bauen lassen: **Deploys → Trigger deploy → Clear cache and deploy site**.
@@ -158,8 +224,10 @@ git push -u origin main
 7. Schöner Name: **Site configuration → Change site name**, z. B. `krippe-pbg` → die Seite heißt
    dann `https://krippe-pbg.netlify.app`.
 
-**Erkennen, ob es geklappt hat:** Auf der Seite `…/host` steht beim Erstellen eines Raums **kein**
-Hinweis „Lokaler Testmodus“ mehr. Wenn doch, fehlen die Variablen oder es wurde nicht neu gebaut.
+**Erkennen, ob es geklappt hat:** Auf der Seite `…/host` steht unter dem Button
+**„Verbindung über Cloudflare“** (oder „über Supabase“, wenn keine Cloudflare-Adresse eingetragen
+ist) – und **kein** Hinweis „Lokaler Testmodus“. Wenn doch, fehlen die Variablen oder es wurde nicht
+neu gebaut.
 
 Jeder neue `git push` auf `main` veröffentlicht automatisch eine neue Version.
 
@@ -171,6 +239,7 @@ Jeder neue `git push` auf `main` veröffentlicht automatisch eine neue Version.
       pausiert. Dagegen hilft der automatische GitHub-Job (siehe unten). Am **15.12.** trotzdem
       einmal im Supabase-Dashboard nachsehen; falls das Projekt pausiert ist, **Restore project**
       klicken (dauert ein paar Minuten).
+- [ ] Auf `…/host` steht „Verbindung über Cloudflare“ (siehe 2b).
 - [ ] **Generalprobe am 15.12.:** Auf der echten Seite `…/host?bots=30` einen Raum erstellen und mit
       zwei, drei echten Handys (eins im WLAN, eins mit mobilen Daten) beitreten und eine Runde spielen.
 - [ ] Zwei Räume gleichzeitig ausprobieren (zwei Rechner/Browser), um zu sehen, dass sie sich nicht stören.
@@ -206,19 +275,25 @@ Gut zu wissen:
 
 ## 6. Wie viele Klassen können gleichzeitig spielen?
 
-Der **kostenlose** Supabase-Tarif erlaubt **200 gleichzeitige Verbindungen** und **100 Nachrichten
-pro Sekunde** für das ganze Projekt. Jedes Handy und jedes Smartboard ist eine Verbindung.
+**Mit Cloudflare (Abschnitt 2b): praktisch beliebig viele.** Jeder Raum hat seinen eigenen
+Mini-Server. Begrenzt ist nur, wie viel an einem Tag gespielt wird – geschätzt 150–200 Spiele pro Tag
+im kostenlosen Tarif. Ob jede/r ein eigenes Handy nimmt oder eine Gruppe eins teilt, ist dann egal
+(höchstens 35 Figuren pro Raum). Die Zahlen sind gerechnet, nicht unter Volllast getestet.
+
+**Nur mit Supabase** (ohne Cloudflare oder im Rückfall-Modus): Der **kostenlose** Supabase-Tarif
+erlaubt **200 gleichzeitige Verbindungen** und **100 Nachrichten pro Sekunde** für das ganze Projekt.
+Jedes Handy und jedes Smartboard ist eine Verbindung.
 
 | Spielweise | Geräte pro Klasse | Klassen gleichzeitig (ca.) |
 |---|---|---|
 | Jede/r mit eigenem Handy | ~30 | **5–6** |
 | **Ein Handy pro Gruppe (3–4 Personen)** – empfohlen | ~8–10 | **15–18** |
 
-Deshalb ist der **Gruppenmodus** der Standard (steht auch so in der Lobby und in der Anleitung):
-Die Klasse bildet Tischgruppen, jede Gruppe spielt mit einem Handy. Das spart Verbindungen und passt
-gut zur Besinnung, weil man gemeinsam überlegt.
+Der **Gruppenmodus** steht als Vorschlag in der Lobby und in der Anleitung: Die Klasse bildet
+Tischgruppen, jede Gruppe spielt mit einem Handy. Das spart Verbindungen und passt gut zur Besinnung,
+weil man gemeinsam überlegt.
 
-Weitere Möglichkeiten, ohne Geld auszugeben:
+Weitere Möglichkeiten im Supabase-Modus, ohne Geld auszugeben:
 
 - **Zeitlich staffeln:** Nicht alle Klassen müssen in derselben Minute spielen. Über die
   **Schulrangliste** (`/rangliste`) werden die Klassen trotzdem verglichen – gewertet wird der Anteil
@@ -309,15 +384,18 @@ Jede Frage hat:
   älteren Handys/Smartboard-Browsern nicht läuft).
 - **Netlify** hostet nur die statische Seite (`netlify.toml` enthält den Build-Befehl und die
   Weiterleitung, damit Links wie `/join/ABCD` funktionieren).
-- **Supabase Realtime (Broadcast)** für die Echtzeit. Der **Host-Browser ist die Spielleitung**:
-  Er hält den Spielstand, wertet Antworten aus (es zählt der Eingang beim Host) und schickt den Stand
-  an alle. Eine Datenbank braucht nur die Schulrangliste.
+- **Echtzeit** wahlweise über den eigenen **Cloudflare-Raum-Server** (Ordner `worker/`, ein Durable
+  Object pro Raum, WebSockets mit Hibernation) oder über **Supabase Realtime (Broadcast)**.
+  In beiden Fällen ist der **Host-Browser die Spielleitung**: Er hält den Spielstand, wertet Antworten
+  aus (es zählt der Eingang beim Host) und schickt den Stand an alle. Der Server leitet nur weiter.
+- **Supabase** außerdem für die Schulrangliste (eine Tabelle, nur lesen und eintragen erlaubt).
 
 | Datei/Ordner | Inhalt |
 |---|---|
 | `src/data/fragen.ts`, `src/data/fragenWelt.ts` | Bibelfragen und weltliche Fragen |
 | `src/game/` | Spielregeln (reine Logik, mit Tests in `engine.test.ts`) |
-| `src/net/` | Echtzeit: Supabase-Broadcast und lokaler Testmodus, Nachrichtenformat |
+| `src/net/` | Echtzeit: Cloudflare, Supabase-Broadcast und lokaler Testmodus, Nachrichtenformat |
+| `worker/` | Raum-Server für Cloudflare (`src/index.ts`, Konfiguration in `wrangler.jsonc`) |
 | `src/host/` | Spielleitung (Smartboard): Steuerung, Bots, Ansichten |
 | `src/player/`, `src/pages/PlayerPage.tsx` | Handy-Ansicht |
 | `src/components/Board.tsx` | das selbst gezeichnete Spielbrett (SVG) |
@@ -326,7 +404,11 @@ Jede Frage hat:
 | `supabase/rangliste-zuruecksetzen.sql` | Rangliste leeren (nur im Supabase-Dashboard) |
 | `.github/workflows/supabase-wachhalten.yml` | hält das Supabase-Projekt wach (GitHub Actions) |
 
-**Kanäle pro Raum** (z. B. Raum `ABCD`):
+**Cloudflare:** pro Gerät eine WebSocket-Verbindung zu `…/raum/ABCD` (Spielleitung mit geheimem
+Raumschlüssel, Handys mit ihrer zufälligen ID). Der Server schickt Nachrichten der Handys nur an die
+Spielleitung und Nachrichten der Spielleitung an alle bzw. an ein einzelnes Handy.
+
+**Supabase – Kanäle pro Raum** (z. B. Raum `ABCD`):
 
 - `krippe:ABCD` – Spielleitung → alle Handys (nur bei Phasenwechseln: Frage, Auflösung, Ende)
 - `krippe:ABCD:host` – Handys → Spielleitung (per REST, Handys hören hier nicht mit)
