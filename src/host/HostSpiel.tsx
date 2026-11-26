@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Board, type BrettFigur, type BrettZug } from '../components/Board';
 import { CountdownRing, useRestzeit } from '../components/Countdown';
 import { QrCode } from '../components/QrCode';
@@ -7,6 +7,7 @@ import { Token } from '../components/Token';
 import { EREIGNIS_INFO, FRAGE_MS, MAX_SPIELER, ZIEL_FELD, type Ereignis } from '../game/constants';
 import { gezeigteFrage, istSpielVorbei, rangliste, spielerListe, type GameState } from '../game/engine';
 import { figurKuerzel, figurName } from '../game/figuren';
+import { ergebnisEintragen, type EintragErgebnis } from '../lib/klassenwertung';
 import { useHostSpiel, type HostSteuerung } from './useHostSpiel';
 
 const BUCHSTABEN = ['A', 'B', 'C', 'D'];
@@ -15,11 +16,17 @@ interface Props {
   start: GameState;
   bots: number;
   onSchliessen(): void;
-  onEnde?(s: GameState): void;
 }
 
-export function HostSpiel({ start, bots, onSchliessen, onEnde }: Props) {
-  const h = useHostSpiel(start, bots, onEnde);
+export function HostSpiel({ start, bots, onSchliessen }: Props) {
+  const [eintrag, setEintrag] = useState<EintragErgebnis | 'laeuft' | null>(null);
+  const h = useHostSpiel(start, bots, (s) => {
+    if (!s.klasse) return;
+    setEintrag('laeuft');
+    ergebnisEintragen(s)
+      .then(setEintrag)
+      .catch(() => setEintrag({ status: 'fehler' }));
+  });
   const { s } = h;
 
   return (
@@ -30,6 +37,11 @@ export function HostSpiel({ start, bots, onSchliessen, onEnde }: Props) {
       {s.phase === 'ende' && (
         <Siegerehrung
           h={h}
+          eintrag={eintrag}
+          onNeueRunde={() => {
+            setEintrag(null);
+            h.neueRunde();
+          }}
           onSchliessen={() => {
             h.schliessen();
             onSchliessen();
@@ -290,7 +302,17 @@ function Legende() {
 
 // ───────────── Siegerehrung ─────────────
 
-function Siegerehrung({ h, onSchliessen }: { h: HostSteuerung; onSchliessen(): void }) {
+function Siegerehrung({
+  h,
+  eintrag,
+  onNeueRunde,
+  onSchliessen,
+}: {
+  h: HostSteuerung;
+  eintrag: EintragErgebnis | 'laeuft' | null;
+  onNeueRunde(): void;
+  onSchliessen(): void;
+}) {
   const { s } = h;
   const liste = rangliste(s);
   const podest = [liste[1], liste[0], liste[2]];
@@ -337,12 +359,25 @@ function Siegerehrung({ h, onSchliessen }: { h: HostSteuerung; onSchliessen(): v
       )}
 
       <div className="flex w-full max-w-6xl items-center justify-between">
-        <p className="font-serif text-2xl text-gold-200">Ein Spiel der SMV des PBG</p>
+        <div>
+          <p className="font-serif text-2xl text-gold-200">Ein Spiel der SMV des PBG</p>
+          {eintrag && (
+            <p className="mt-1 text-lg text-white/85">
+              {eintrag === 'laeuft'
+                ? 'Ergebnis wird in die Schulrangliste eingetragen …'
+                : eintrag.status === 'eingetragen'
+                  ? `Klasse ${s.klasse}: ${eintrag.quote} % richtig – in der Schulrangliste eingetragen.`
+                  : eintrag.status === 'uebersprungen'
+                    ? `Schulrangliste: ${eintrag.grund}`
+                    : 'Schulrangliste: Eintragen hat nicht geklappt.'}
+            </p>
+          )}
+        </div>
         <div className="flex gap-4">
           <button className="btn-ghost text-2xl" onClick={onSchliessen}>
             Raum schließen
           </button>
-          <button className="btn-gold text-2xl" onClick={h.neueRunde}>
+          <button className="btn-gold text-2xl" onClick={onNeueRunde}>
             Noch eine Runde
           </button>
         </div>

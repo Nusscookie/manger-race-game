@@ -9,7 +9,7 @@
  *
  * So kostet eine Frage mit 35 Spielern nur rund 4 × 35 Nachrichten.
  */
-import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
+import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import type { VerbindungsStatus } from './protocol';
 import type { Transport } from './transport';
 
@@ -34,16 +34,7 @@ async function restSenden(ch: RealtimeChannel, payload: unknown): Promise<void> 
   }
 }
 
-export function supabaseTransport(url: string, key: string): Transport {
-  const client: SupabaseClient = createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    realtime: {
-      params: { eventsPerSecond: 20 },
-      // Herzschlag im Web Worker, damit Browser ihn in Hintergrund-Tabs nicht drosseln.
-      worker: typeof Worker !== 'undefined',
-    },
-  });
-
+export function supabaseTransport(client: SupabaseClient): Transport {
   /** Kanal-Objekte nur zum Senden per REST (werden nie abonniert). */
   const sendeKanaele = new Map<string, RealtimeChannel>();
   function sendeKanal(topic: string): RealtimeChannel {
