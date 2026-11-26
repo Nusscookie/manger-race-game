@@ -21,7 +21,7 @@ import {
   type GameState,
   type Phase,
 } from '../game/engine';
-import { loadJSON, removeKey, saveJSON } from '../lib/storage';
+import { loadJSON, loadSessionJSON, removeKey, removeSessionKey, saveJSON, saveSessionJSON } from '../lib/storage';
 import type { AnHost, VerbindungsStatus } from '../net/protocol';
 import { getTransport, type HostVerbindung } from '../net/transport';
 import { aktuellerZustand, aufloesungMsg, endeMsg, frageMsg } from './nachrichten';
@@ -32,15 +32,29 @@ export const AUFLOESUNG_MS = 10_000;
 /** Kurze Pause, wenn alle geantwortet haben, bevor aufgelöst wird */
 const ALLE_DA_PAUSE_MS = 800;
 
+function brauchbar(s: GameState | null): s is GameState {
+  return !!s && !!s.code && s.phase !== 'ende' && Date.now() - s.aktualisiert < 3 * 60 * 60 * 1000;
+}
+
+/**
+ * Zuerst das Spiel dieses Tabs (sessionStorage – wichtig, falls jemand zwei Räume im selben
+ * Browser leitet), sonst das zuletzt gespeicherte Spiel dieses Browsers (localStorage).
+ */
 export function gespeichertesSpiel(): GameState | null {
-  const s = loadJSON<GameState>(HOST_SPEICHER);
-  if (!s || !s.code || s.phase === 'ende') return null;
-  if (Date.now() - s.aktualisiert > 3 * 60 * 60 * 1000) return null;
-  return s;
+  const tab = loadSessionJSON<GameState>(HOST_SPEICHER);
+  if (brauchbar(tab)) return tab;
+  const browser = loadJSON<GameState>(HOST_SPEICHER);
+  return brauchbar(browser) ? browser : null;
 }
 
 export function gespeichertesSpielLoeschen() {
   removeKey(HOST_SPEICHER);
+  removeSessionKey(HOST_SPEICHER);
+}
+
+function spielSpeichern(s: GameState) {
+  saveSessionJSON(HOST_SPEICHER, s);
+  saveJSON(HOST_SPEICHER, s);
 }
 
 export interface HostSteuerung {
@@ -75,7 +89,7 @@ export function useHostSpiel(start: GameState, bots: number, onEnde?: (s: GameSt
   onEndeRef.current = onEnde;
 
   const geaendert = useCallback(() => {
-    saveJSON(HOST_SPEICHER, sRef.current);
+    spielSpeichern(sRef.current);
     setTick((t) => t + 1);
   }, []);
 

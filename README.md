@@ -48,6 +48,9 @@ Tabs im selben Browser. Das reicht zum Ausprobieren:
    deine eigene Figur.
 3. In Tab 1 „Spiel starten“.
 
+Mehrere Test-Spieler im selben Browser teilen sich eine Figur – für weitere Spieler ein privates
+Fenster oder einen anderen Browser nehmen (oder gleich `?bots=30`).
+
 `?bots=30` funktioniert auch später auf der echten Seite – so kannst du das Spiel ohne Klasse testen.
 Im Testmodus mit nur Bots wird nichts in die Schulrangliste eingetragen.
 

@@ -316,19 +316,22 @@ function Siegerehrung({
   const { s } = h;
   const liste = rangliste(s);
   const podest = [liste[1], liste[0], liste[2]];
-  const hoehen = ['h-40', 'h-56', 'h-28'];
+  const hoehen = ['h-36', 'h-48', 'h-24'];
+  const amZiel = liste.some((p) => p.feld >= ZIEL_FELD);
   const plaetze = [2, 1, 3];
   const rest = liste.slice(3);
 
   return (
     <main className="flex min-h-0 flex-1 flex-col items-center gap-6 px-8 pb-4 pt-2">
-      <h2 className="einblenden text-6xl font-bold text-gold-200">An der Krippe angekommen!</h2>
+      <h2 className="einblenden mb-2 text-6xl font-bold text-gold-200">
+        {amZiel ? 'An der Krippe angekommen!' : 'Die Reise ist zu Ende'}
+      </h2>
 
       <div className="flex items-end justify-center gap-8">
         {podest.map((p, i) =>
           p ? (
             <div key={p.id} className="einblenden flex w-72 flex-col items-center gap-3" style={{ animationDelay: `${(2 - i) * 0.25}s` }}>
-              <Token figur={p.figur} groesse={plaetze[i] === 1 ? 7 : 5.5} />
+              <Token figur={p.figur} groesse={plaetze[i] === 1 ? 6.5 : 5} />
               <p className="text-center text-3xl font-semibold">{figurName(p.figur)}</p>
               <p className="text-xl text-gold-200">Feld {p.feld}</p>
               <div

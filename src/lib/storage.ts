@@ -24,3 +24,29 @@ export function removeKey(key: string): void {
     /* ignorieren */
   }
 }
+
+/** Pro Browser-Tab (übersteht Neuladen, aber nicht das Schließen des Tabs). */
+export function loadSessionJSON<T>(key: string): T | null {
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveSessionJSON(key: string, value: unknown): void {
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* ignorieren */
+  }
+}
+
+export function removeSessionKey(key: string): void {
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch {
+    /* ignorieren */
+  }
+}
