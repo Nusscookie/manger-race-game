@@ -82,10 +82,15 @@ Du brauchst zwei Werte:
 | Name im Spiel | Wo in Supabase | Beispiel |
 |---|---|---|
 | `VITE_SUPABASE_URL` | Project URL | `https://abcdefgh.supabase.co` |
-| `VITE_SUPABASE_ANON_KEY` | **anon / public** key – oder der neue **publishable** key (`sb_publishable_…`) | `eyJhbGciOi…` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | **publishable** key (`sb_publishable_…`) | `sb_publishable_abc…` |
 
-> ⚠️ **Niemals** den `service_role`- bzw. `secret`-Schlüssel verwenden. Der anon/publishable key ist
+Supabase zeigt dir unter „Connect“ Anleitungen für verschiedene Frameworks (Next.js usw.) – die brauchst
+du nicht, nur diese zwei Werte. Statt `VITE_SUPABASE_PUBLISHABLE_KEY` funktioniert auch der ältere Name
+`VITE_SUPABASE_ANON_KEY` mit dem alten „anon“-Schlüssel (`eyJ…`).
+
+> ⚠️ **Niemals** den `secret`- bzw. `service_role`-Schlüssel verwenden. Der publishable key ist
 > dafür gedacht, im Browser zu stehen – geschützt wird die Datenbank durch die Regeln aus 2.4.
+> „Mit Claude verbinden“ (MCP) ist für das Spiel nicht nötig.
 
 ### 2.3 Realtime erlauben
 
@@ -137,7 +142,7 @@ git push -u origin main
 4. **Bevor** du auf Deploy klickst – oder danach unter
    **Site configuration → Environment variables → Add a variable** – die beiden Variablen eintragen:
    - `VITE_SUPABASE_URL` = deine Project URL
-   - `VITE_SUPABASE_ANON_KEY` = dein anon/publishable key
+   - `VITE_SUPABASE_PUBLISHABLE_KEY` = dein publishable key (`sb_publishable_…`)
 5. **Deploy** klicken. Nach ca. einer Minute ist die Seite online.
 6. Wichtig: Wenn du die Variablen **nach** dem ersten Deploy einträgst oder änderst, musst du neu
    bauen lassen: **Deploys → Trigger deploy → Clear cache and deploy site**.
