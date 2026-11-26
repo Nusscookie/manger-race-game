@@ -167,9 +167,10 @@ Jeder neue `git push` auf `main` veröffentlicht automatisch eine neue Version.
 
 ## 5. Vor dem 16. Dezember: Checkliste
 
-- [ ] **Supabase-Projekt aufwecken:** Kostenlose Projekte werden nach etwa einer Woche ohne Nutzung
-      pausiert. Am **15.12.** im Supabase-Dashboard einloggen; falls das Projekt pausiert ist,
-      **Restore project** klicken (dauert ein paar Minuten).
+- [ ] **Supabase-Projekt wach halten:** Kostenlose Projekte werden nach etwa einer Woche ohne Nutzung
+      pausiert. Dagegen hilft der automatische GitHub-Job (siehe unten). Am **15.12.** trotzdem
+      einmal im Supabase-Dashboard nachsehen; falls das Projekt pausiert ist, **Restore project**
+      klicken (dauert ein paar Minuten).
 - [ ] **Generalprobe am 15.12.:** Auf der echten Seite `…/host?bots=30` einen Raum erstellen und mit
       zwei, drei echten Handys (eins im WLAN, eins mit mobilen Daten) beitreten und eine Runde spielen.
 - [ ] Zwei Räume gleichzeitig ausprobieren (zwei Rechner/Browser), um zu sehen, dass sie sich nicht stören.
@@ -177,6 +178,29 @@ Jeder neue `git push` auf `main` veröffentlicht automatisch eine neue Version.
       `src/data/fragenWelt.ts` einmal durchlesen.
 - [ ] Testeinträge aus der Rangliste löschen (siehe 2.4).
 - [ ] Link und Anleitung für die Lehrkräfte verschicken (siehe [`LEHRKRAEFTE.md`](LEHRKRAEFTE.md)).
+
+### Supabase automatisch wach halten (GitHub Actions)
+
+Im Repo liegt [`.github/workflows/supabase-wachhalten.yml`](.github/workflows/supabase-wachhalten.yml).
+Der Job fragt **montags und donnerstags** einmal die Ranglisten-Tabelle ab – das zählt für Supabase
+als Aktivität, das Projekt schläft also nicht ein. Kostenlos, keine Daten werden verändert.
+
+Einmalig einrichten:
+
+1. Auf GitHub im Repo **Settings → Secrets and variables → Actions → New repository secret**.
+2. Name `SUPABASE_URL`, Wert: deine Supabase-Adresse (`https://….supabase.co`) → **Add secret**.
+3. Noch einmal **New repository secret**: Name `SUPABASE_PUBLISHABLE_KEY`, Wert: der
+   `sb_publishable_…`-Schlüssel (derselbe wie bei Netlify – **nicht** der secret-Schlüssel).
+4. Reiter **Actions** → links **Supabase wach halten** → **Run workflow** → **Run workflow**.
+   Nach ca. 20 Sekunden sollte ein grüner Haken erscheinen.
+
+Gut zu wissen:
+
+- Wird der Job rot, bekommst du von GitHub eine E-Mail. Meist heißt das: Secret falsch geschrieben
+  oder das Projekt ist schon pausiert (dann im Dashboard **Restore project**).
+- GitHub schaltet geplante Jobs ab, wenn im Repo **60 Tage** lang nichts passiert ist. Bis
+  Weihnachten ist das kein Thema; danach wieder einschalten unter **Actions → Supabase wach halten →
+  Enable workflow**, falls ihr das Spiel nächstes Jahr wieder nutzt.
 
 ---
 
@@ -300,6 +324,7 @@ Jede Frage hat:
 | `src/lib/klassenwertung.ts`, `src/pages/RanglistePage.tsx` | Schulrangliste |
 | `supabase/klassenwertung.sql` | Tabelle + Sicherheitsregeln für die Rangliste |
 | `supabase/rangliste-zuruecksetzen.sql` | Rangliste leeren (nur im Supabase-Dashboard) |
+| `.github/workflows/supabase-wachhalten.yml` | hält das Supabase-Projekt wach (GitHub Actions) |
 
 **Kanäle pro Raum** (z. B. Raum `ABCD`):
 

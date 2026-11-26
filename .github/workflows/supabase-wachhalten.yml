@@ -1,0 +1,42 @@
+# Hält das kostenlose Supabase-Projekt wach.
+# Supabase pausiert Gratis-Projekte nach etwa 7 Tagen ohne Datenbank-Aktivität. Dieser Job fragt
+# zweimal pro Woche die Ranglisten-Tabelle ab – das zählt als Aktivität.
+#
+# Einrichtung (einmalig): GitHub → Repo → Settings → Secrets and variables → Actions →
+# „New repository secret“ für SUPABASE_URL und SUPABASE_PUBLISHABLE_KEY (siehe README, Abschnitt 5).
+# Testen: Reiter „Actions“ → „Supabase wach halten“ → „Run workflow“.
+
+name: Supabase wach halten
+
+on:
+  schedule:
+    # Montag und Donnerstag um 06:17 UTC (krumme Minute, weil GitHub zur vollen Stunde oft verzögert)
+    - cron: '17 6 * * 1,4'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ranglisten-Tabelle abfragen
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo "::error::Secrets SUPABASE_URL und SUPABASE_PUBLISHABLE_KEY fehlen (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+          status=$(curl -sS -o antwort.txt -w '%{http_code}' --retry 3 --retry-delay 20 \
+            "${SUPABASE_URL%/}/rest/v1/klassenwertung?select=id&limit=1" \
+            -H "apikey: $SUPABASE_PUBLISHABLE_KEY")
+          echo "Antwort von Supabase: HTTP $status"
+          if [ "$status" != "200" ]; then
+            cat antwort.txt
+            echo "::error::Supabase hat nicht mit 200 geantwortet. Ist das Projekt pausiert? Im Dashboard „Restore project“ klicken."
+            exit 1
+          fi
+          echo "Supabase ist wach."
